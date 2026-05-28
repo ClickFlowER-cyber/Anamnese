@@ -1,0 +1,8 @@
+{
+  "name": "Anamnese e Evolução - Reflexologia Podal",
+  "description": "Sistema de Ficha de Anamnese Digital e Evolução Clínica para Reflexologia Podal com controle de consentimento LGPD, auditoria jurídica e acompanhamento em tempo real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
