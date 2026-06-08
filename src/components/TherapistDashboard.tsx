@@ -6,20 +6,33 @@ import {
   Lock, Unlock, RefreshCw, Smartphone, Copy, Check, Send, AlertTriangle, Play, Calendar, Zap, LayoutDashboard, Footprints, Settings
 } from 'lucide-react';
 
+const formatDate = (value: string): string => {
+  const digits = value.replace(/\D/g, "");
+  const truncated = digits.slice(0, 8);
+  if (truncated.length <= 2) {
+    return truncated;
+  } else if (truncated.length <= 4) {
+    return `${truncated.slice(0, 2)}/${truncated.slice(2)}`;
+  } else {
+    return `${truncated.slice(0, 2)}/${truncated.slice(2, 4)}/${truncated.slice(4)}`;
+  }
+};
+
 export default function TherapistDashboard() {
   // Therapist logged in status
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem('therapist_logged_in') === 'true';
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loggedTherapistName, setLoggedTherapistName] = useState(() => {
     return localStorage.getItem('therapist_name') || 'Dra. Renata Vasconcelos';
   });
   const [loggedTherapistEmail, setLoggedTherapistEmail] = useState(() => {
     return localStorage.getItem('therapist_email') || 'renata.vasconcelos@gmail.com';
   });
+  const [loggedTherapistId, setLoggedTherapistId] = useState(() => {
+    return localStorage.getItem('therapist_id') || 'ter-1';
+  });
 
   const [patients, setPatients] = useState<Paciente[]>([]);
-  const [activeTab, setActiveTab] = useState<'pacientes' | 'auditoria' | 'config'>('pacientes');
+  const [activeTab, setActiveTab] = useState<'pacientes' | 'auditoria'>('pacientes');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [patientDetails, setPatientDetails] = useState<{
     paciente: Paciente;
@@ -32,14 +45,14 @@ export default function TherapistDashboard() {
 
   // Form states for creating a patient
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newPatient, setNewPatient] = useState({
+  const [newPatient, setNewPatient] = useState(() => ({
     nome_completo: '',
     data_nascimento: '',
     endereco: '',
     contato: '',
     id_clinica: 'clin-1',
-    id_terapeuta: 'ter-1'
-  });
+    id_terapeuta: localStorage.getItem('therapist_id') || 'ter-1'
+  }));
   const [createdFeedback, setCreatedFeedback] = useState<any | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -80,10 +93,10 @@ export default function TherapistDashboard() {
   const [metaClinics, setMetaClinics] = useState<any[]>([]);
   const [metaTherapists, setMetaTherapists] = useState<any[]>([]);
 
-  // Load patient list and meta on mount
+  // Load patient list and meta on mount and whenever therapist changes
   useEffect(() => {
     fetchMetaAndPatients();
-  }, []);
+  }, [loggedTherapistId]);
 
   // Poll for live typing if a patient detail pane is loaded
   useEffect(() => {
@@ -117,7 +130,7 @@ export default function TherapistDashboard() {
       setMetaClinics(meta.clinicas);
       setMetaTherapists(meta.terapeutas);
 
-      const resPacs = await fetch('/api/pacientes');
+      const resPacs = await fetch(`/api/pacientes?id_terapeuta=${loggedTherapistId}`);
       const pacs = await resPacs.json();
       setPatients(pacs);
     } catch (e) {
@@ -179,10 +192,16 @@ export default function TherapistDashboard() {
     }
 
     try {
+      // Bind newly created patient to the logged-in therapist responsibility
+      const patientPayload = {
+        ...newPatient,
+        id_terapeuta: loggedTherapistId
+      };
+
       const res = await fetch('/api/pacientes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPatient)
+        body: JSON.stringify(patientPayload)
       });
       const data = await res.json();
       setCreatedFeedback(data);
@@ -192,7 +211,7 @@ export default function TherapistDashboard() {
         endereco: '',
         contato: '',
         id_clinica: 'clin-1',
-        id_terapeuta: 'ter-1'
+        id_terapeuta: loggedTherapistId
       });
       fetchMetaAndPatients();
     } catch (e) {
@@ -333,12 +352,14 @@ export default function TherapistDashboard() {
   if (!isLoggedIn) {
     return (
       <TherapistLogin 
-        onLoginSuccess={(name, email) => {
+        onLoginSuccess={(id, name, email) => {
           localStorage.setItem('therapist_logged_in', 'true');
           localStorage.setItem('therapist_name', name);
           localStorage.setItem('therapist_email', email);
+          localStorage.setItem('therapist_id', id);
           setLoggedTherapistName(name);
           setLoggedTherapistEmail(email);
+          setLoggedTherapistId(id);
           setIsLoggedIn(true);
         }}
       />
@@ -365,9 +386,10 @@ export default function TherapistDashboard() {
                     localStorage.removeItem('therapist_logged_in');
                     localStorage.removeItem('therapist_name');
                     localStorage.removeItem('therapist_email');
+                    localStorage.removeItem('therapist_id');
                     setIsLoggedIn(false);
                   }}
-                  className="text-[10px] font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer text-left"
+                  className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-extrabold rounded-full text-[10px] transition cursor-pointer text-center whitespace-nowrap uppercase tracking-wider"
                 >
                   Sair da Conta
                 </button>
@@ -378,36 +400,25 @@ export default function TherapistDashboard() {
           <div className="flex flex-wrap gap-2">
             <button 
               onClick={() => setActiveTab('pacientes')} 
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all ${
+              className={`flex items-center gap-2 px-4.5 py-2.5 text-xs font-bold rounded-xl cursor-pointer transition-all border ${
                 activeTab === 'pacientes' 
-                  ? 'bg-teal-600 text-white shadow-md' 
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-teal-700 text-white border-teal-850 shadow-md shadow-teal-100 ring-2 ring-teal-500/20' 
+                  : 'bg-slate-50 text-slate-705 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
-              <Users className="w-3.5 h-3.5" />
+              <Users className="w-4 h-4" />
               <span>Paciente & Prontuários</span>
             </button>
             <button 
               onClick={() => setActiveTab('auditoria')} 
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all ${
+              className={`flex items-center gap-2 px-4.5 py-2.5 text-xs font-bold rounded-xl cursor-pointer transition-all border ${
                 activeTab === 'auditoria' 
-                  ? 'bg-teal-600 text-white shadow-md' 
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-teal-700 text-white border-teal-850 shadow-md shadow-teal-100 ring-2 ring-teal-500/20' 
+                  : 'bg-slate-50 text-slate-750 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
-              <History className="w-3.5 h-3.5" />
+              <History className="w-4 h-4" />
               <span>Rastreabilidade Legal</span>
-            </button>
-            <button 
-              onClick={() => setActiveTab('config')} 
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all ${
-                activeTab === 'config' 
-                  ? 'bg-teal-600 text-white shadow-md' 
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Cron / Sistema</span>
             </button>
           </div>
         </div>
@@ -431,10 +442,10 @@ export default function TherapistDashboard() {
                     setShowCreateModal(true);
                   }}
                   id="cadastrar-paciente-btn"
-                  className="bg-teal-55/60 hover:bg-teal-50 text-teal-700 p-1.5 px-2.5 rounded-lg border border-teal-100 hover:border-teal-200 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 px-3.5 rounded-xl border border-emerald-700 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer shadow-md hover:shadow-lg active:scale-95"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  <span>Novo</span>
+                  <span>Novo Paciente</span>
                 </button>
               </div>
 
@@ -560,13 +571,13 @@ export default function TherapistDashboard() {
                             type="text" 
                             readOnly 
                             value={`http://localhost:3000/portal-paciente?token=${patientDetails.token.token_string}`}
-                            className="bg-white border border-slate-200 text-[10px] font-mono p-1 rounded w-48 text-slate-500"
+                            className="bg-white border border-slate-300 text-[10px] font-mono p-1.5 rounded w-48 text-slate-700 shadow-inner focus:outline-none focus:ring-1 focus:ring-teal-500"
                           />
                           <button 
                             onClick={() => copyToClipboard(`http://localhost:3000/portal-paciente?token=${patientDetails.token.token_string}`)}
-                            className="p-1 px-2 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 text-[10px] font-semibold rounded flex items-center gap-1 cursor-pointer"
+                            className="p-1.5 px-3 bg-teal-700 hover:bg-teal-800 text-white border border-teal-850 text-xs font-bold rounded flex items-center gap-1 cursor-pointer transition shadow-sm h-[32px]"
                           >
-                            {copiedLink ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                            {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                             <span>{copiedLink ? 'OK' : 'Link'}</span>
                           </button>
                         </div>
@@ -605,28 +616,28 @@ export default function TherapistDashboard() {
                       </h3>
                       {patientDetails.paciente.status_tratamento !== 'Finalizado por Inatividade' && (
                         isEditingSection === 'cadastro' ? (
-                          <div className="flex gap-2">
+                          <div className="flex gap-2.5">
                             <button 
                               onClick={() => {
                                 setIsEditingSection(null);
                                 setEditPatientForm(patientDetails.paciente);
                               }}
-                              className="text-xs font-semibold text-slate-500 hover:text-slate-700 font-sans cursor-pointer"
+                              className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 px-3 py-1.5 rounded-lg cursor-pointer transition"
                             >
                               Cancelar
                             </button>
                             <button 
                               onClick={() => handleTherapistAmendment('cadastro')}
                               disabled={updatingServer}
-                              className="text-xs font-bold text-teal-600 hover:text-teal-700 font-sans cursor-pointer"
+                              className="text-xs font-extrabold text-white bg-teal-700 hover:bg-teal-800 border border-teal-850 px-3.5 py-1.5 rounded-lg cursor-pointer shadow-sm transition"
                             >
-                              {updatingServer ? 'Salvando...' : 'Salvar e Registrar Log'}
+                              {updatingServer ? 'Salvando...' : 'Salvar Alteraçoes e Log'}
                             </button>
                           </div>
                         ) : (
                           <button 
                             onClick={() => setIsEditingSection('cadastro')}
-                            className="text-xs font-bold text-teal-600 hover:text-teal-700 font-sans cursor-pointer"
+                            className="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-extrabold px-3 py-1.5 rounded-lg text-xs transition duration-150 flex items-center gap-1 cursor-pointer hover:shadow-xs font-sans"
                           >
                             Alterar Campos
                           </button>
@@ -650,7 +661,7 @@ export default function TherapistDashboard() {
                           <input 
                             type="text" 
                             value={editPatientForm.data_nascimento || ''}
-                            onChange={(e) => setEditPatientForm({...editPatientForm, data_nascimento: e.target.value})}
+                            onChange={(e) => setEditPatientForm({...editPatientForm, data_nascimento: formatDate(e.target.value)})}
                             className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 text-slate-800"
                           />
                         </div>
@@ -751,20 +762,20 @@ export default function TherapistDashboard() {
                       </h3>
                       {patientDetails.paciente.status_tratamento !== 'Finalizado por Inatividade' && pDetailsCheck(patientDetails.paciente) && (
                         isEditingSection === 'anamnese' ? (
-                          <div className="flex gap-2">
+                          <div className="flex gap-2.5">
                             <button 
                               onClick={() => {
                                 setIsEditingSection(null);
                                 setEditFichaForm(patientDetails.ficha);
                               }}
-                              className="text-xs font-semibold text-slate-500 hover:text-slate-700 font-sans cursor-pointer"
+                              className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 px-3 py-1.5 rounded-lg cursor-pointer transition"
                             >
                               Cancelar
                             </button>
                             <button 
                               onClick={() => handleTherapistAmendment('anamnese')}
                               disabled={updatingServer}
-                              className="text-xs font-bold text-teal-600 hover:text-teal-700 font-sans cursor-pointer"
+                              className="text-xs font-extrabold text-white bg-teal-700 hover:bg-teal-800 border border-teal-850 px-3.5 py-1.5 rounded-lg cursor-pointer shadow-sm transition"
                             >
                               {updatingServer ? 'Projetando...' : 'Gravar Alterações'}
                             </button>
@@ -772,7 +783,7 @@ export default function TherapistDashboard() {
                         ) : (
                           <button 
                             onClick={() => setIsEditingSection('anamnese')}
-                            className="text-xs font-bold text-teal-600 hover:text-teal-700 font-sans cursor-pointer"
+                            className="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-extrabold px-3 py-1.5 rounded-lg text-xs transition duration-150 flex items-center gap-1 cursor-pointer hover:shadow-xs font-sans"
                           >
                             Editar Anamnese
                           </button>
@@ -1057,9 +1068,9 @@ export default function TherapistDashboard() {
                                   {!isFinalized && !isCurrentEdit && (
                                     <button 
                                       onClick={() => handleStartEditSession(sess)}
-                                      className="text-xs font-bold text-teal-600 hover:text-teal-700 hover:underline font-sans cursor-pointer"
+                                      className="bg-amber-50 hover:bg-amber-100 border border-amber-250 text-amber-800 font-extrabold px-3 py-1.5 rounded-lg text-xs transition duration-150 flex items-center gap-1 cursor-pointer font-sans shadow-xs hover:shadow-xs"
                                     >
-                                      Editar Dados
+                                      Editar Rascunho
                                     </button>
                                   )}
                                 </div>
@@ -1101,21 +1112,21 @@ export default function TherapistDashboard() {
                                   <div className="flex gap-2 justify-end pt-2">
                                     <button 
                                       onClick={() => setEditingSessionId(null)}
-                                      className="text-xs font-semibold text-slate-500 bg-slate-100 hover:bg-slate-200 py-1.5 px-3 rounded-lg cursor-pointer"
+                                      className="text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 py-2.5 px-4 rounded-xl cursor-pointer transition"
                                     >
                                       Descartar
                                     </button>
                                     <button 
                                       onClick={() => handleSaveSessionUpdate(sess.id_sessao, false)}
-                                      className="text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 py-1.5 px-3 rounded-lg border border-teal-200 cursor-pointer"
+                                      className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 py-2.5 px-4.5 rounded-xl border border-slate-300 hover:border-slate-400 cursor-pointer transition shadow-xs hover:shadow-xs"
                                     >
                                       Salvar Rascunho
                                     </button>
                                     <button 
                                       onClick={() => handleSaveSessionUpdate(sess.id_sessao, true)}
-                                      className="text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 py-1.5 px-4 rounded-lg flex items-center gap-1 cursor-pointer"
+                                      className="text-xs font-extrabold text-white bg-teal-700 hover:bg-teal-800 py-2.5 px-5 rounded-xl border border-teal-850 flex items-center gap-1.5 cursor-pointer shadow-md transition active:scale-95"
                                     >
-                                      <Lock className="w-3 h-3" /> Finalizar Prontuário Jurídico
+                                      <Lock className="w-3.5 h-3.5" /> Finalizar Prontuário Jurídico
                                     </button>
                                   </div>
                                 </div>
@@ -1237,72 +1248,7 @@ export default function TherapistDashboard() {
           </div>
         )}
 
-        {/* VIEW 3: Cron Inactivity config Panel */}
-        {activeTab === 'config' && (
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6 animate-fade-in font-sans" id="config-panel">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-800 tracking-tight flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-teal-600" />
-                  Rotinas Automáticas (Regra de Inatividade dos 90 Dias)
-                </h2>
-                <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-normal">
-                  Sob as resoluções clínicas vigentes, todo prontuário que não contiver movimentações (exame de anamnese editado ou novas evoluções inseridas) por período igual ou superior a 90 (noventa) dias deve ser carimbado com o status de inatividade e congelado indefinidamente contra qualquer tipo de modificação retroativa.
-                </p>
-              </div>
 
-              <button
-                type="button"
-                id="executar-cron-inatividade-btn"
-                disabled={runningCron}
-                onClick={triggerInactivityPruning}
-                className={`text-xs font-semibold py-3 px-5 rounded-xl flex items-center gap-2 transition shadow-sm font-sans shrink-0 cursor-pointer ${
-                  runningCron 
-                    ? 'bg-amber-100 text-amber-800' 
-                    : 'bg-slate-900 text-white hover:bg-slate-800'
-                }`}
-              >
-                {runningCron ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4.5 w-4.5 border-2 border-amber-300 border-t-amber-800"></div>
-                    <span>Executando Varredura...</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 fill-white" />
-                    <span>Disparar Cron de Inatividade Diário</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Inactivity Simulation guide */}
-            <div className="p-4 bg-amber-55/60 rounded-2xl border border-amber-200 text-xs text-amber-900 leading-relaxed font-sans flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5 animate-none" />
-              <div className="space-y-1">
-                <span className="font-bold">Como funciona no Simulador?</span>
-                <p>
-                  O paciente <strong>"José Roberto de Oliveira"</strong> de teste está cadastrado no sistema com data de atualização superior a 100 dias atrás. Ao clicar no botão de disparo da rotina acima, o sistema irá recalcular os prazos no backend, alterará o seu status de tratamento para <strong>"Finalizado por Inatividade"</strong> e bloqueará instantaneamente todas as ações dele na tela do terapeuta e possíveis acessos!
-                </p>
-              </div>
-            </div>
-
-            {/* Cron Logs Screen */}
-            <div className="space-y-2">
-              <span className="text-xs font-bold text-slate-705 text-slate-600 uppercase tracking-wider font-mono">Consola de depuração do Cron do Servidor</span>
-              <div className="bg-slate-900 p-4 rounded-xl font-mono text-xs text-teal-400 leading-relaxed space-y-1.5 h-64 overflow-y-auto text-teal-300 border border-slate-800">
-                <p className="text-slate-500">// Início dos logs do contêiner</p>
-                {cronLogs.length === 0 ? (
-                  <p className="text-slate-500">Aguardando disparo pelo terapeuta no botão superior para verificar integridade...</p>
-                ) : (
-                  cronLogs.map((log, i) => (
-                    <p key={i} className="whitespace-pre-wrap">{log}</p>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* MODAL WINDOW: Create Patient "Cadastro Mínimo" */}
         {showCreateModal && (
@@ -1344,7 +1290,7 @@ export default function TherapistDashboard() {
                       <input 
                         type="text" 
                         value={newPatient.data_nascimento}
-                        onChange={(e) => setNewPatient({...newPatient, data_nascimento: e.target.value})}
+                        onChange={(e) => setNewPatient({...newPatient, data_nascimento: formatDate(e.target.value)})}
                         className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 text-slate-800"
                         placeholder="Ex: 12/04/1988"
                       />

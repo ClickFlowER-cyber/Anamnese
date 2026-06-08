@@ -8,6 +8,18 @@ interface PatientPortalProps {
   standalone?: boolean;
 }
 
+const formatDate = (value: string): string => {
+  const digits = value.replace(/\D/g, "");
+  const truncated = digits.slice(0, 8);
+  if (truncated.length <= 2) {
+    return truncated;
+  } else if (truncated.length <= 4) {
+    return `${truncated.slice(0, 2)}/${truncated.slice(2)}`;
+  } else {
+    return `${truncated.slice(0, 2)}/${truncated.slice(2, 4)}/${truncated.slice(4)}`;
+  }
+};
+
 export default function PatientPortal({ tokenString, onSuccess, standalone = false }: PatientPortalProps) {
   const [token, setToken] = useState<string>(tokenString);
   const [loading, setLoading] = useState(true);
@@ -109,6 +121,10 @@ export default function PatientPortal({ tokenString, onSuccess, standalone = fal
 
     if (type === 'checkbox') {
       computedValue = (e.target as HTMLInputElement).checked;
+    }
+
+    if (name === 'data_nascimento') {
+      computedValue = formatDate(value);
     }
 
     setForm(prev => ({
@@ -228,7 +244,7 @@ export default function PatientPortal({ tokenString, onSuccess, standalone = fal
           <button 
             type="button" 
             onClick={() => setSuccessMsg(null)}
-            className="px-5 py-2.5 bg-gradient-to-r from-teal-700 to-teal-800 hover:from-teal-800 hover:to-teal-900 text-white font-medium text-xs rounded-xl shadow-sm hover:shadow transition duration-150 font-sans cursor-pointer flex items-center justify-center gap-1.5"
+            className="px-6 py-3 bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg transition duration-150 font-sans cursor-pointer flex items-center justify-center gap-1.5 border border-teal-850"
           >
             <Sparkles className="w-4 h-4 animate-pulse" />
             Ver ou Alterar Respostas Desta Ficha
@@ -261,7 +277,7 @@ export default function PatientPortal({ tokenString, onSuccess, standalone = fal
                   queixa_principal: ''
                 });
               }}
-              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-xl transition font-sans cursor-pointer flex items-center justify-center"
+              className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold text-xs rounded-xl transition duration-150 font-sans cursor-pointer flex items-center justify-center shadow-xs"
             >
               Testar com outro token
             </button>
@@ -305,9 +321,9 @@ export default function PatientPortal({ tokenString, onSuccess, standalone = fal
             <button 
               type="button"
               onClick={fetchData}
-              className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition cursor-pointer"
+              className="bg-teal-700 hover:bg-teal-850 text-white text-xs font-extrabold px-5 py-2.5 rounded-lg transition shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95 border border-teal-900 cursor-pointer flex items-center justify-center shrink-0"
             >
-              Validar
+              Validar Token
             </button>
           </div>
         </div>
@@ -679,10 +695,10 @@ export default function PatientPortal({ tokenString, onSuccess, standalone = fal
             type="submit"
             id="submeter-ficha-paciente-btn"
             disabled={!lgpdAccepted || submitting}
-            className={`w-full font-sans flex items-center justify-center gap-2 py-3.5 px-6 font-bold rounded-xl text-sm transition-all shadow-sm ${
+            className={`w-full font-sans flex items-center justify-center gap-2.5 py-4 px-8 font-extrabold rounded-xl text-sm transition-all shadow-md active:scale-[0.98] ${
               lgpdAccepted && !submitting
-                ? 'bg-teal-600 hover:bg-teal-700 text-white cursor-pointer hover:shadow-lg' 
-                : 'bg-slate-100 text-slate-400 opacity-60 cursor-not-allowed border border-slate-200'
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer hover:shadow-lg active:bg-emerald-850 hover:-translate-y-0.5 border border-emerald-700' 
+                : 'bg-slate-100 text-slate-400 opacity-70 cursor-not-allowed border border-slate-205'
             }`}
           >
             {submitting ? (

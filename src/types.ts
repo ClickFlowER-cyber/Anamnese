@@ -8,6 +8,7 @@ export interface Terapeuta {
   id_terapeuta: string;
   nome: string;
   registro: string;
+  email?: string;
 }
 
 export interface Paciente {

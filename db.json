@@ -15,198 +15,20 @@
     {
       "id_terapeuta": "ter-1",
       "nome": "Dra. Renata Vasconcelos",
-      "registro": "CRTF-1244-SP"
+      "registro": "CRTF-1244-SP",
+      "email": "renata.vasconcelos@gmail.com"
     },
     {
       "id_terapeuta": "ter-2",
       "nome": "Dr. Thiago Melo",
-      "registro": "CRTF-3912-SP"
+      "registro": "CRTF-3912-SP",
+      "email": "thiago.melo@gmail.com"
     }
   ],
-  "pacientes": [
-    {
-      "id_paciente": "pac-1",
-      "nome_completo": "Mariana Silva de Albuquerque",
-      "data_nascimento": "12/04/1988",
-      "endereco": "Av. Paulista, 1000, Bloco B, Cerqueira César - São Paulo/SP",
-      "contato": "(11) 98765-4321",
-      "cpf": "123.456.789-00",
-      "num_filhos": 2,
-      "estado_civil": "Casado",
-      "profissao": "Arquiteta",
-      "religiao": "Católica",
-      "status_tratamento": "Ativo",
-      "id_clinica": "clin-1",
-      "id_terapeuta_responsavel": "ter-1",
-      "created_at": "2026-05-10T14:30:00Z",
-      "updated_at": "2026-05-24T18:00:00Z"
-    },
-    {
-      "id_paciente": "pac-2",
-      "id_clina": "clin-1",
-      "nome_completo": "José Roberto de Oliveira",
-      "data_nascimento": "25/11/1954",
-      "endereco": "Rua das Flores, 45, Bairro Alto - Campinas/SP",
-      "contato": "(19) 99123-5566",
-      "cpf": "987.654.321-11",
-      "num_filhos": 0,
-      "estado_civil": "Solteiro",
-      "profissao": "Aposentado",
-      "religiao": "Espírita",
-      "status_tratamento": "Finalizado por Inatividade",
-      "id_clinica": "clin-1",
-      "id_terapeuta_responsavel": "ter-1",
-      "created_at": "2026-01-15T10:00:00Z",
-      "updated_at": "2026-02-10T12:00:00Z"
-    },
-    {
-      "id_paciente": "pac-3",
-      "nome_completo": "Gabriela Mendes Fraga",
-      "data_nascimento": "04/09/1995",
-      "endereco": "Rua Pamplona, 452, Jardins - São Paulo/SP",
-      "contato": "(11) 97722-1144",
-      "cpf": "456.123.789-44",
-      "num_filhos": 1,
-      "estado_civil": "União Estável",
-      "profissao": "Analista de Software",
-      "religiao": "Não possui",
-      "status_tratamento": "Ativo",
-      "id_clinica": "clin-1",
-      "id_terapeuta_responsavel": "ter-1",
-      "created_at": "2026-05-24T22:00:00Z",
-      "updated_at": "2026-05-24T22:30:00Z"
-    }
-  ],
-  "fichas": [
-    {
-      "id_ficha": "fic-1",
-      "id_paciente": "pac-1",
-      "pressao_arterial": "Normal",
-      "uso_medicamentos": true,
-      "medicamentos": "Puran T4 50mcg contra hipotireoidismo diariamente pela manhã",
-      "lesao_cranial": "Não consta histórico de lesão ou pancada forte craniana.",
-      "lesao_coluna": "Apresenta discreta escoliose lombar, diagnosticada há 5 anos.",
-      "cirurgias": "Cirurgia de apendicite em 2018. Recuperação sem intercorrências.",
-      "diabetes": "Sem diagnóstico de diabetes.",
-      "queixa_principal": "Dor aguda no calcanhar esquerdo e calosidade na região do metatarso direito. Sensação de peso nas pernas ao final do dia.",
-      "created_at": "2026-05-10T14:40:00Z",
-      "updated_at": "2026-05-24T18:00:00Z"
-    },
-    {
-      "id_ficha": "fic-2",
-      "id_paciente": "pac-2",
-      "pressao_arterial": "Alta",
-      "uso_medicamentos": true,
-      "medicamentos": "Anlodipino 5mg e Losartana 50mg de uso contínuo.",
-      "lesao_cranial": "Sem histórico.",
-      "lesao_coluna": "Dores crônicas na cervical.",
-      "cirurgias": "Nenhuma cirurgia relatada.",
-      "diabetes": "Diabetes tipo II diagnosticada há 8 anos, faz controle alimentar.",
-      "queixa_principal": "Dormência intensa nos dedos de ambos os pés.",
-      "created_at": "2026-01-15T10:15:00Z",
-      "updated_at": "2026-02-10T12:00:00Z"
-    },
-    {
-      "id_ficha": "fic-3",
-      "id_paciente": "pac-3",
-      "pressao_arterial": "Normal",
-      "uso_medicamentos": false,
-      "medicamentos": "",
-      "lesao_cranial": "",
-      "lesao_coluna": "",
-      "cirurgias": "",
-      "diabetes": "",
-      "queixa_principal": "Cansaço extremo devido ao estresse no trabalho computadorizado. Gostaria de focar no relaxamento e melhora da qualidade de sono.",
-      "created_at": "2026-05-24T22:05:00Z",
-      "updated_at": "2026-05-24T22:30:00Z"
-    }
-  ],
-  "sessoes": [
-    {
-      "id_sessao": "ses-101",
-      "id_paciente": "pac-1",
-      "id_terapeuta": "ter-1",
-      "data_sessao": "2026-05-11T16:00:00Z",
-      "evolucao": "Primeiro atendimento. Foi realizada a varredura reflexológica podal identificando severa sensibilidade na zona reflexa do rim esquerdo e plexo solar. Feita estimulação leve com foco em relaxamento.",
-      "observacoes": "Paciente demonstrou alta sensibilidade tátil.",
-      "reacoes_paciente": "Relatou sensação de formigamento e leve relaxamento muscular imediato.",
-      "status": "Finalizado",
-      "data_finalizacao": "2026-05-11T16:50:00Z",
-      "created_at": "2026-05-11T15:55:00Z",
-      "updated_at": "2026-05-11T16:50:00Z"
-    },
-    {
-      "id_sessao": "ses-102",
-      "id_paciente": "pac-1",
-      "id_terapeuta": "ter-1",
-      "data_sessao": "2026-05-18T16:00:00Z",
-      "evolucao": "Segunda sessão terapêutica. Houve melhora acentuada na sensibilidade do calcanhar esquerdo. Foco no estímulo do sistema linfático e zona digestiva (fígado e cólon).",
-      "observacoes": "Pressão arterial aferida antes de iniciar: 120/80 mmHg.",
-      "reacoes_paciente": "Relatou sono profundo após a última sessão e redução nas dores lombares.",
-      "status": "Finalizado",
-      "data_finalizacao": "2026-05-18T16:55:00Z",
-      "created_at": "2026-05-18T15:50:00Z",
-      "updated_at": "2026-05-18T16:55:00Z"
-    },
-    {
-      "id_sessao": "ses-103",
-      "id_paciente": "pac-1",
-      "id_terapeuta": "ter-1",
-      "data_sessao": "2026-05-24T17:30:00Z",
-      "evolucao": "Terceira sessão. Estimulação da zona reflexa pélvica e sistema neurovegetativo. Sensibilidade no plexo solar diminuída. Redução da dor de calcâneo relatada de grau 8 para 3.",
-      "observacoes": "Sessão concluída e arquivada judicialmente.",
-      "reacoes_paciente": "Relato de bem-estar absoluto e leveza nos pés.",
-      "status": "Finalizado",
-      "data_finalizacao": "2026-05-24T18:00:00Z",
-      "created_at": "2026-05-24T17:20:00Z",
-      "updated_at": "2026-05-24T18:00:00Z"
-    }
-  ],
-  "auditorias": [
-    {
-      "id_auditoria": "aud-1",
-      "id_paciente": "pac-1",
-      "timestamp_aceite": "2026-05-10T14:40:00Z",
-      "ip_origem": "200.189.41.22",
-      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
-      "termo_versao": "LGPD-REFLEXO-V1"
-    },
-    {
-      "id_auditoria": "aud-2",
-      "id_paciente": "pac-2",
-      "timestamp_aceite": "2026-01-15T10:15:00Z",
-      "ip_origem": "179.251.102.3",
-      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "termo_versao": "LGPD-REFLEXO-V1"
-    },
-    {
-      "id_auditoria": "aud-3",
-      "id_paciente": "pac-3",
-      "timestamp_aceite": "2026-05-24T22:05:00Z",
-      "ip_origem": "187.35.198.241",
-      "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
-      "termo_versao": "LGPD-REFLEXO-V1"
-    }
-  ],
-  "historico": [
-    {
-      "id_historico": "hist-1",
-      "id_paciente": "pac-1",
-      "terapeuta_nome": "Dra. Renata Vasconcelos",
-      "timestamp_alteracao": "2026-05-24T17:50:00Z",
-      "campo_alterado": "Medicamentos",
-      "valor_anterior": "Nenhum informado",
-      "valor_novo": "Puran T4 50mcg contra hipotireoidismo diariamente pela manhã"
-    }
-  ],
-  "tokens": [
-    {
-      "id_token": "tok-test-new",
-      "token_string": "REF-9922",
-      "id_paciente": "pac-3",
-      "foi_usado": false,
-      "expira_em": "2030-05-25T22:00:00Z",
-      "criado_em": "2026-05-24T22:00:00Z"
-    }
-  ]
+  "pacientes": [],
+  "fichas": [],
+  "sessoes": [],
+  "auditorias": [],
+  "historico": [],
+  "tokens": []
 }
