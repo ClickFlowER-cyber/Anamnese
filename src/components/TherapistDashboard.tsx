@@ -3,7 +3,8 @@ import TherapistLogin from './TherapistLogin';
 import { Paciente, FichaAnamnese, SessaoEvolucao, AuditoriaConsentimento, HistoricoAlteracoes } from '../types';
 import { 
   Users, User, FileText, ClipboardList, Clock, ShieldCheck, History, PlusCircle, Save, CheckCircle2, 
-  Lock, Unlock, RefreshCw, Smartphone, Copy, Check, Send, AlertTriangle, Play, Calendar, Zap, LayoutDashboard, Footprints, Settings
+  Lock, Unlock, RefreshCw, Smartphone, Copy, Check, Send, AlertTriangle, Play, Calendar, Zap, LayoutDashboard, Footprints, Settings,
+  MessageSquare, Mail
 } from 'lucide-react';
 
 const formatDate = (value: string): string => {
@@ -20,19 +21,34 @@ const formatDate = (value: string): string => {
 
 export default function TherapistDashboard() {
   // Therapist logged in status
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('therapist_logged_in') === 'true';
+  });
   const [loggedTherapistName, setLoggedTherapistName] = useState(() => {
-    return localStorage.getItem('therapist_name') || 'Dra. Renata Vasconcelos';
+    return localStorage.getItem('therapist_name') || '';
   });
   const [loggedTherapistEmail, setLoggedTherapistEmail] = useState(() => {
-    return localStorage.getItem('therapist_email') || 'renata.vasconcelos@gmail.com';
+    return localStorage.getItem('therapist_email') || '';
   });
   const [loggedTherapistId, setLoggedTherapistId] = useState(() => {
-    return localStorage.getItem('therapist_id') || 'ter-1';
+    return localStorage.getItem('therapist_id') || '';
   });
 
   const [patients, setPatients] = useState<Paciente[]>([]);
-  const [activeTab, setActiveTab] = useState<'pacientes' | 'auditoria'>('pacientes');
+  const [activeTab, setActiveTab] = useState<'pacientes' | 'auditoria' | 'configuracoes'>('pacientes');
+  const [customTitle, setCustomTitle] = useState(() => {
+    return localStorage.getItem(`panel_title_${localStorage.getItem('therapist_id') || 'default'}`) || 'Painel do Terapeuta Reflexologista';
+  });
+
+  // Load custom title when therapist loads
+  useEffect(() => {
+    const id = localStorage.getItem('therapist_id') || loggedTherapistId;
+    if (id) {
+      const saved = localStorage.getItem(`panel_title_${id}`);
+      setCustomTitle(saved || 'Painel do Terapeuta Reflexologista');
+    }
+  }, [loggedTherapistId]);
+
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [patientDetails, setPatientDetails] = useState<{
     paciente: Paciente;
@@ -51,10 +67,11 @@ export default function TherapistDashboard() {
     endereco: '',
     contato: '',
     id_clinica: 'clin-1',
-    id_terapeuta: localStorage.getItem('therapist_id') || 'ter-1'
+    id_terapeuta: localStorage.getItem('therapist_id') || ''
   }));
   const [createdFeedback, setCreatedFeedback] = useState<any | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [feedbackMsgTab, setFeedbackMsgTab] = useState<'whatsapp' | 'email'>('whatsapp');
 
   // Edit states for patient/anamnese
   const [isEditingSection, setIsEditingSection] = useState<'cadastro' | 'anamnese' | null>(null);
@@ -160,7 +177,7 @@ export default function TherapistDashboard() {
 
   const handleReactivatePatient = async (pId: string) => {
     try {
-      const defaultTherapist = metaTherapists.find(t => t.id_terapeuta === patientDetails?.paciente.id_terapeuta_responsavel)?.nome || "Dra. Renata Vasconcelos";
+      const defaultTherapist = metaTherapists.find(t => t.id_terapeuta === patientDetails?.paciente.id_terapeuta_responsavel)?.nome || loggedTherapistName || "Terapeuta";
       const res = await fetch(`/api/pacientes/${pId}/reativar`, {
         method: 'POST',
         headers: {
@@ -180,6 +197,34 @@ export default function TherapistDashboard() {
       await loadPatientComplete(pId);
     } catch (e: any) {
       alert(e.message || "Não foi possível reativar o prontuário.");
+    }
+  };
+
+  const handleToggleStatus = async (pId: string, currentStatus: string) => {
+    try {
+      const targetStatus = currentStatus === 'Ativo' ? 'Inativo' : 'Ativo';
+      const defaultTherapist = metaTherapists.find(t => t.id_terapeuta === patientDetails?.paciente.id_terapeuta_responsavel)?.nome || loggedTherapistName || "Terapeuta";
+      
+      const res = await fetch(`/api/pacientes/${pId}/alterar-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: targetStatus,
+          terapeuta_nome: defaultTherapist
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Ocorreu um erro ao alterar o status.");
+      }
+
+      await fetchMetaAndPatients();
+      await loadPatientComplete(pId);
+    } catch (e: any) {
+      alert(e.message || "Não foi possível atualizar o status do paciente.");
     }
   };
 
@@ -225,7 +270,7 @@ export default function TherapistDashboard() {
     setUpdatingServer(true);
     
     // Audit payload requires name of therapist
-    const defaultTherapist = metaTherapists.find(t => t.id_terapeuta === patientDetails?.paciente.id_terapeuta_responsavel)?.nome || "Dra. Renata Vasconcelos";
+    const defaultTherapist = metaTherapists.find(t => t.id_terapeuta === patientDetails?.paciente.id_terapeuta_responsavel)?.nome || loggedTherapistName || "Terapeuta";
     
     try {
       const res = await fetch(`/api/pacientes/${selectedPatientId}`, {
@@ -295,7 +340,7 @@ export default function TherapistDashboard() {
   // Save Session Draft
   const handleSaveSessionUpdate = async (sessionId: string, asFinalized: boolean) => {
     try {
-      const defaultTherapist = metaTherapists.find(t => t.id_terapeuta === patientDetails?.paciente.id_terapeuta_responsavel)?.nome || "Dra. Renata Vasconcelos";
+      const defaultTherapist = metaTherapists.find(t => t.id_terapeuta === patientDetails?.paciente.id_terapeuta_responsavel)?.nome || loggedTherapistName || "Terapeuta";
       const res = await fetch(`/api/sessoes/${sessionId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -377,7 +422,7 @@ export default function TherapistDashboard() {
               <Footprints className="w-6 h-6 animate-pulse" />
             </div>
             <div>
-              <h1 className="text-lg font-bold font-sans tracking-tight text-slate-800">Painel do Terapeuta Reflexologista</h1>
+              <h1 className="text-lg font-bold font-sans tracking-tight text-slate-800">{customTitle}</h1>
               <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 mt-0.5">
                 <span className="text-xs text-slate-500 font-medium">Sessão: <strong className="text-teal-700">{loggedTherapistName}</strong> ({loggedTherapistEmail})</span>
                 <span className="hidden sm:inline text-slate-350">•</span>
@@ -420,6 +465,17 @@ export default function TherapistDashboard() {
               <History className="w-4 h-4" />
               <span>Rastreabilidade Legal</span>
             </button>
+            <button 
+              onClick={() => setActiveTab('configuracoes')} 
+              className={`flex items-center gap-2 px-4.5 py-2.5 text-xs font-bold rounded-xl cursor-pointer transition-all border ${
+                activeTab === 'configuracoes' 
+                  ? 'bg-teal-700 text-white border-teal-850 shadow-md shadow-teal-100 ring-2 ring-teal-500/20' 
+                  : 'bg-slate-50 text-slate-750 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span>Personalização</span>
+            </button>
           </div>
         </div>
 
@@ -434,7 +490,7 @@ export default function TherapistDashboard() {
               <div className="flex justify-between items-center pb-3 border-b border-slate-100">
                 <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                   <ClipboardList className="w-4 h-4 text-teal-600" />
-                  Pacientes Ativos ({patients.length})
+                  Prontuários ({patients.filter(p => p.status_tratamento === 'Ativo').length} Ativos)
                 </h2>
                 <button
                   onClick={() => {
@@ -546,10 +602,34 @@ export default function TherapistDashboard() {
                               Reativar Prontuário
                             </button>
                           </div>
+                        ) : patientDetails.paciente.status_tratamento === 'Ativo' ? (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[9px] font-bold bg-teal-50 text-teal-750 border border-teal-200 px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
+                              Ativo para Consulta
+                            </span>
+                            <button
+                              onClick={() => handleToggleStatus(patientDetails.paciente.id_paciente, 'Ativo')}
+                              className="text-[9px] font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-800 border border-slate-200 hover:border-slate-300 px-2 py-1 rounded-full flex items-center gap-1 cursor-pointer shadow-xs transition"
+                              title="Inativar paciente para suspender temporariamente"
+                            >
+                              <Lock className="w-2.5 h-2.5 text-slate-500" />
+                              Inativar Paciente
+                            </button>
+                          </div>
                         ) : (
-                          <span className="text-[9px] font-bold bg-teal-50 text-teal-750 border border-teal-200 px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
-                            Ativo para Consulta
-                          </span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[9px] font-bold bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
+                              Inativo
+                            </span>
+                            <button
+                              onClick={() => handleToggleStatus(patientDetails.paciente.id_paciente, 'Inativo')}
+                              className="text-[9px] font-bold bg-teal-50 hover:bg-teal-100 text-teal-750 hover:text-teal-800 border border-teal-200 hover:border-teal-300 px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer shadow-xs transition"
+                              title="Reativar paciente e restabelecer prontuário"
+                            >
+                              <Unlock className="w-2.5 h-2.5 text-teal-600" />
+                              Ativar Paciente
+                            </button>
+                          </div>
                         )}
                       </div>
                       <div className="text-xs text-slate-500 font-medium">
@@ -570,11 +650,11 @@ export default function TherapistDashboard() {
                           <input 
                             type="text" 
                             readOnly 
-                            value={`http://localhost:3000/portal-paciente?token=${patientDetails.token.token_string}`}
+                            value={`${window.location.origin}/portal-paciente?token=${patientDetails.token.token_string}`}
                             className="bg-white border border-slate-300 text-[10px] font-mono p-1.5 rounded w-48 text-slate-700 shadow-inner focus:outline-none focus:ring-1 focus:ring-teal-500"
                           />
                           <button 
-                            onClick={() => copyToClipboard(`http://localhost:3000/portal-paciente?token=${patientDetails.token.token_string}`)}
+                            onClick={() => copyToClipboard(`${window.location.origin}/portal-paciente?token=${patientDetails.token.token_string}`)}
                             className="p-1.5 px-3 bg-teal-700 hover:bg-teal-800 text-white border border-teal-850 text-xs font-bold rounded flex items-center gap-1 cursor-pointer transition shadow-sm h-[32px]"
                           >
                             {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -1248,27 +1328,132 @@ export default function TherapistDashboard() {
           </div>
         )}
 
+        {/* VIEW 3: Personalização Tab */}
+        {activeTab === 'configuracoes' && (
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6" id="personalizacao-view">
+            <div>
+              <h2 className="text-base font-bold text-slate-800 tracking-tight flex items-center gap-2 font-sans">
+                <Settings className="w-5 h-5 text-teal-600 animate-spin-slow" />
+                Personalização do Painel de Trabalho
+              </h2>
+              <p className="text-xs text-slate-500 mt-1 leading-normal font-sans">
+                Personalize os textos e o cabeçalho que aparecem na interface do seu painel de trabalho. Essas preferências ficarão guardadas localmente no seu navegador para as próximas sessões.
+              </p>
+            </div>
+
+            <div className="max-w-2xl bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4 font-sans">
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider font-sans">
+                  Título Principal do Painel
+                </label>
+                <input
+                  type="text"
+                  value={customTitle}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCustomTitle(val);
+                    localStorage.setItem(`panel_title_${loggedTherapistId}`, val);
+                  }}
+                  placeholder="Ex: Painel do Terapeuta Reflexologista"
+                  className="w-full px-3.5 py-2 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500 placeholder-slate-400 font-sans"
+                />
+                <p className="text-[11px] text-slate-400 leading-normal font-sans">
+                  Este texto será exibido no topo da tela principal sempre que você estiver conectado como <strong className="text-slate-600">{loggedTherapistName || 'seu usuário'}</strong>.
+                </p>
+              </div>
+
+              {/* Suggestions */}
+              <div className="space-y-2 pt-2">
+                <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider font-sans">
+                  Sugestões Rápidas:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    `Painel da ${loggedTherapistName || 'Terapeuta'}`,
+                    `Consultório de Reflexologia - ${loggedTherapistName || 'Terapeuta'}`,
+                    'Painel do Terapeuta Reflexologista',
+                    'Espaço Integrativo de Saúde do Pé',
+                    'Prontuário e Evolução Podal'
+                  ].map((sug, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setCustomTitle(sug);
+                        localStorage.setItem(`panel_title_${loggedTherapistId}`, sug);
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-medium bg-white hover:bg-teal-50 border border-slate-200 hover:border-teal-300 rounded-full text-slate-600 hover:text-teal-700 transition cursor-pointer font-sans"
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reset to Default */}
+              <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fallback = 'Painel do Terapeuta Reflexologista';
+                    setCustomTitle(fallback);
+                    localStorage.setItem(`panel_title_${loggedTherapistId}`, fallback);
+                  }}
+                  className="px-3.5 py-2 text-xs font-semibold bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-600 transition cursor-pointer font-sans"
+                >
+                  Restaurar Padrão
+                </button>
+
+                <div className="flex items-center gap-1.5 text-xs text-teal-750 font-bold animate-pulse font-sans">
+                  <CheckCircle2 className="w-4 h-4 text-teal-600" />
+                  <span>Salvo automaticamente!</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Visual Preview Box */}
+            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3 max-w-2xl font-sans">
+              <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider font-sans">
+                Como ficará exibido no seu cabeçalho:
+              </span>
+              <div className="bg-white p-4 rounded-xl border border-slate-150 shadow-sm flex items-center gap-3">
+                <div className="w-10 h-10 bg-teal-50 text-teal-600 rounded-lg flex items-center justify-center border border-teal-100 shrink-0">
+                  <Footprints className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800 font-sans">{customTitle || 'Painel do Terapeuta Reflexologista'}</h3>
+                  <div className="text-[10px] text-slate-400 font-medium font-sans">Sessão: {loggedTherapistName} ({loggedTherapistEmail})</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
 
 
         {/* MODAL WINDOW: Create Patient "Cadastro Mínimo" */}
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in" id="cadastro-modal-root">
-            <div className="bg-white rounded-2xl p-6 max-w-xl w-full border border-slate-205 border-slate-200 shadow-2xl relative font-sans space-y-5">
-              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                <h3 className="text-sm font-bold text-slate-805 text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
+            <div className="bg-white rounded-2xl p-5 md:p-6 max-w-lg w-full border border-slate-200 shadow-2xl relative font-sans flex flex-col max-h-[92vh]">
+              <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
+                <h3 className="text-xs md:text-sm font-bold text-slate-800 uppercase tracking-widest flex items-center gap-1.5 font-sans">
                   <Footprints className="w-4 h-4 text-teal-600" />
-                  Cadastro Mínimo e Geração de Token Seguro
+                  Geração de Token Seguro
                 </h3>
                 <button 
-                  onClick={() => setShowCreateModal(false)}
-                  className="p-1 text-slate-400 hover:text-slate-600 transition text-sm font-bold font-sans cursor-pointer"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setCreatedFeedback(null);
+                  }}
+                  className="px-2.5 py-1 text-slate-400 hover:text-slate-600 transition text-xs font-bold font-sans cursor-pointer hover:bg-slate-50 rounded-lg"
                 >
                   Fechar
                 </button>
               </div>
 
-              {!createdFeedback ? (
-                <form onSubmit={handleCreatePatientSubmit} className="space-y-4">
+              <div className="overflow-y-auto pr-1 flex-1 py-3 space-y-4 max-h-[78vh] scrollbar-thin">
+                {!createdFeedback ? (
+                  <form onSubmit={handleCreatePatientSubmit} className="space-y-4">
                   <p className="text-slate-500 text-xs leading-normal">
                     Preencha as informações preliminares necessárias para carregar a ficha de atendimento. O sistema gerará um token blindado exclusivo que será encaminhado ao paciente de forma segura.
                   </p>
@@ -1323,7 +1508,12 @@ export default function TherapistDashboard() {
                         onChange={(e) => setNewPatient({...newPatient, id_terapeuta: e.target.value})}
                         className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500"
                       >
-                        {metaTherapists.map(t => <option key={t.id_terapeuta} value={t.id_terapeuta}>{t.nome}</option>)}
+                        {metaTherapists.filter(t => t.id_terapeuta === loggedTherapistId).map(t => (
+                          <option key={t.id_terapeuta} value={t.id_terapeuta}>{t.nome}</option>
+                        ))}
+                        {metaTherapists.filter(t => t.id_terapeuta === loggedTherapistId).length === 0 && (
+                          <option value={loggedTherapistId}>{loggedTherapistName}</option>
+                        )}
                       </select>
                     </div>
                   </div>
@@ -1340,81 +1530,218 @@ export default function TherapistDashboard() {
                 </form>
               ) : (
                 <div className="space-y-4">
-                  <div className="p-3 bg-teal-50 rounded-xl border border-teal-150 flex items-center gap-2.5">
-                    <CheckCircle2 className="w-5 h-5 text-teal-600 shrink-0" />
-                    <span className="text-[11px] font-bold text-teal-950 font-sans">Paciente cadastrado e Token de Acesso Blindado Gerado!</span>
+                  <div className="p-4 bg-teal-50 rounded-xl border border-teal-100 flex items-center gap-3">
+                    <div className="bg-teal-600 text-white p-1.5 rounded-full shrink-0">
+                      <Check className="w-4 h-4 stroke-[3]" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-teal-950">Cadastro Concluído com Sucesso!</h4>
+                      <p className="text-[11px] text-teal-800 mt-0.5">Um token de acesso unificado e seguro foi gerado para este paciente.</p>
+                    </div>
                   </div>
 
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs font-sans space-y-1.5 text-slate-700">
-                    <p><strong>Paciente Criado:</strong> {createdFeedback.paciente.nome_completo}</p>
-                    <p><strong>Token Provisório:</strong> <strong className="font-mono text-teal-700 font-bold bg-white px-2 py-0.5 border border-slate-200">{createdFeedback.token.token_string}</strong></p>
-                    <p><strong>Validade:</strong> 24 Horas (Expira em: {new Date(createdFeedback.token.expira_em).toLocaleTimeString()})</p>
-                  </div>
+                  {/* Informações Principais do Paciente e Token */}
+                  <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-4 border-b border-slate-150 pb-3">
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Paciente Atendido</span>
+                        <span className="block text-xs font-bold text-slate-800 mt-0.5">{createdFeedback.paciente.nome_completo}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Validade do Token</span>
+                        <span className="block text-xs font-bold text-slate-800 mt-0.5">24 Horas (Expira hoje)</span>
+                      </div>
+                    </div>
 
-                  {/* Transactional dispatch simulations logs */}
-                  <div className="space-y-3">
-                    <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider font-mono">❑ Simuladores de Disparo do Canal de Notificação</h4>
-                    
-                    {/* Simulated Whatsapp message block */}
-                    <div className="p-3 bg-green-50 rounded-xl border border-green-200/60 font-sans space-y-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[9px] font-bold bg-green-200 text-green-950 px-1.5 py-0.5 rounded font-mono">WhatsApp API (Fidelity Log)</span>
+                    {/* GRANDE SEÇÃO DO TOKEN ÚNICO */}
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider font-sans block text-center">
+                        🔑 TOKEN DE ACESSO UNIFICADO (E-MAIL OU WHATSAPP)
+                      </span>
+                      
+                      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between p-3 bg-white border border-dashed border-teal-500/35 rounded-xl text-center sm:text-left shadow-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-sans">Token Numérico de Acesso:</span>
+                          <span className="text-2xl font-mono font-extrabold text-teal-700 tracking-widest">{createdFeedback.token.token_string}</span>
+                        </div>
+                        
                         <button 
-                          onClick={() => copyToClipboard(createdFeedback.whatsappSimulatedPayload)}
-                          className="text-[9px] font-semibold text-green-800 hover:underline flex items-center gap-0.5 cursor-pointer"
+                          type="button"
+                          onClick={() => {
+                            copyToClipboard(createdFeedback.token.token_string);
+                            alert("Token copiado para a área de transferência!");
+                          }}
+                          className="w-full sm:w-auto px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-250 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer hover:shadow-xs active:scale-95"
                         >
-                          <Copy className="w-3 h-3" /> Copiar Conteúdo SMS
+                          <Copy className="w-3.5 h-3.5 text-slate-500" />
+                          Copiar Código
                         </button>
                       </div>
-                      <p className="text-[11px] text-green-900 leading-normal italic select-all">"{createdFeedback.whatsappSimulatedPayload}"</p>
                     </div>
 
-                    {/* Simulated SMTP email block */}
-                    <div className="p-3 bg-blue-50 rounded-xl border border-blue-200/60 font-sans space-y-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[9px] font-bold bg-blue-200 text-blue-950 px-1.5 py-0.5 rounded font-mono">E-mail SMTP Servidor (Transactional)</span>
-                        <span className="text-[9px] text-blue-800">Assunto: {createdFeedback.emailSimulatedPayload.subject}</span>
+                    {/* SEÇÃO DO LINK ÚNICO */}
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider font-sans block">
+                        🔗 LINK SEGURO DO PORTAL
+                      </span>
+                      <div className="flex flex-col sm:flex-row gap-2 items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl shadow-xs">
+                        <span className="text-xs font-mono text-slate-650 truncate select-all max-w-[280px] sm:max-w-[340px] block py-1.5 px-2 bg-slate-50 rounded border border-slate-100">
+                          {window.location.origin}/portal-paciente?token={createdFeedback.token.token_string}
+                        </span>
+                        
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            copyToClipboard(`${window.location.origin}/portal-paciente?token=${createdFeedback.token.token_string}`);
+                            alert("Link do portal copiado!");
+                          }}
+                          className="w-full sm:w-auto px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 hover:shadow-xs"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          Copiar Link
+                        </button>
                       </div>
-                      <p className="text-[11px] text-blue-900 leading-normal italic">
-                        <strong>Para:</strong> {createdFeedback.emailSimulatedPayload.to} <br/>
-                        <strong>Mensagem:</strong> {createdFeedback.emailSimulatedPayload.body}
-                      </p>
                     </div>
                   </div>
 
-                  <div className="p-3 bg-opacity-75 bg-amber-50 rounded-xl border border-amber-200 text-[10px] text-amber-950 flex items-start gap-2">
+                  {/* CANAL DE ENVIO UNIFICADO E DE FÁCIL LEITURA */}
+                  <div className="space-y-4 font-sans bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 bg-teal-50 rounded-lg text-teal-600 shrink-0">
+                          <Send className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-800 tracking-tight">
+                            Modelo de Mensagem de Envio
+                          </h4>
+                          <p className="text-[11px] text-slate-500 font-sans mt-0.5">
+                            Selecione o canal para visualizar e copiar o texto correspondente.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Segmented control tabs */}
+                      <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0 select-none">
+                        <button
+                          type="button"
+                          onClick={() => setFeedbackMsgTab('whatsapp')}
+                          className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition-all duration-200 ${
+                            feedbackMsgTab === 'whatsapp'
+                              ? 'bg-white text-green-700 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                          }`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                          WhatsApp
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFeedbackMsgTab('email')}
+                          className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition-all duration-200 ${
+                            feedbackMsgTab === 'email'
+                              ? 'bg-white text-blue-700 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                          }`}
+                        >
+                          <Mail className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          E-mail
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Highly readable text display box */}
+                    <div className="space-y-3">
+                      {feedbackMsgTab === 'whatsapp' ? (
+                        <div className="space-y-3">
+                          <div className="p-4 bg-green-50/30 rounded-xl border border-green-200/50 relative hover:border-green-300 transition duration-150 group">
+                            <span className="absolute top-2.5 right-3 text-[9px] font-bold text-green-600 bg-green-100/60 px-2 py-0.5 rounded uppercase tracking-wider">
+                              Visualização WhatsApp
+                            </span>
+                            <div className="leading-relaxed font-sans text-slate-800 text-[13px] md:text-sm pt-2 select-all font-normal">
+                              "{createdFeedback.whatsappSimulatedPayload}"
+                            </div>
+                          </div>
+                          
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              copyToClipboard(createdFeedback.whatsappSimulatedPayload);
+                              alert("Mensagem de WhatsApp copiada!");
+                            }}
+                            className="w-full sm:w-auto px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-xs hover:shadow-md"
+                          >
+                            <Copy className="w-4 h-4" /> Copiar Mensagem de Envio
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="bg-blue-50/15 rounded-xl border border-blue-200/40 overflow-hidden hover:border-blue-300 transition duration-150">
+                            {/* E-mail Subject bar */}
+                            <div className="px-4 py-3 bg-blue-50/35 border-b border-blue-100/70 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+                              <span className="text-[9px] font-bold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded tracking-wider w-fit shrink-0 uppercase">ASSUNTO DO E-MAIL</span>
+                              <span className="text-xs font-bold text-slate-800 select-all tracking-tight font-sans">
+                                {createdFeedback.emailSimulatedPayload.subject}
+                              </span>
+                            </div>
+                            
+                            {/* E-mail Body area */}
+                            <div className="p-4 leading-relaxed font-sans text-slate-800 text-[13px] md:text-sm select-all font-normal whitespace-pre-wrap">
+                              {createdFeedback.emailSimulatedPayload.body}
+                            </div>
+                          </div>
+                          
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              copyToClipboard(createdFeedback.emailSimulatedPayload.body);
+                              alert("Mensagem de E-mail copiada!");
+                            }}
+                            className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-xs hover:shadow-md"
+                          >
+                            <Copy className="w-4 h-4" /> Copiar Corpo do E-mail
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Link simulation reminder */}
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-950 leading-relaxed flex items-start gap-2.5">
                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-bold text-amber-900">Aviso para Simulação Completa Real:</span>
-                      <p className="mt-0.5 text-amber-805 text-amber-800">
-                        Copie o link seguro gerado ou use o botão do simulador dual na lateral para visualizar o paciente preenchendo o diagnóstico em tempo real no dispositivo móvel simulado!
+                      <span className="font-bold text-amber-900 block font-sans">Simulação de Preenchimento Real</span>
+                      <p className="text-amber-805 text-amber-800 mt-0.5 font-sans leading-relaxed text-[11px]">
+                        Tanto o link do WhatsApp quanto o do E-mail utilizam o <strong>mesmo token unificado ({createdFeedback.token.token_string})</strong> para evitar duplicidade de prontuários. Você pode clicar no link abaixo para testar o portal imediatamente em nome do paciente!
                       </p>
                     </div>
                   </div>
 
-                  <div className="pt-2 flex justify-between items-center">
+                  <div className="pt-2.5 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3">
                     <a 
                       href={`/portal-paciente?token=${createdFeedback.token.token_string}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-bold text-teal-600 hover:text-teal-700 hover:underline flex items-center gap-1 font-sans cursor-pointer"
+                      className="text-xs font-bold text-teal-700 hover:text-teal-800 hover:underline flex items-center gap-1.5 font-sans cursor-pointer py-1.5"
                     >
                       Acessar Portal do Paciente em Nova Guia 
-                      <ClipboardList className="w-3.5 h-3.5" />
+                      <ClipboardList className="w-4 h-4" />
                     </a>
+                    
                     <button 
                       onClick={() => {
                         setShowCreateModal(false);
                         setCreatedFeedback(null);
                         fetchMetaAndPatients();
                       }}
-                      className="bg-slate-900 text-white font-bold text-xs py-2 px-4 rounded-lg cursor-pointer hover:bg-slate-800 transition"
+                      className="w-full sm:w-auto bg-slate-900 text-white font-bold text-xs py-2 px-5 rounded-lg cursor-pointer hover:bg-slate-800 transition active:scale-95 shadow-xs"
                     >
                       Concluído
                     </button>
                   </div>
                 </div>
               )}
+              </div>
             </div>
           </div>
         )}

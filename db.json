@@ -11,24 +11,62 @@
       "cnpj": "82.411.391/0001-44"
     }
   ],
-  "terapeutas": [
+  "terapeutas": [],
+  "pacientes": [
     {
-      "id_terapeuta": "ter-1",
-      "nome": "Dra. Renata Vasconcelos",
-      "registro": "CRTF-1244-SP",
-      "email": "renata.vasconcelos@gmail.com"
-    },
-    {
-      "id_terapeuta": "ter-2",
-      "nome": "Dr. Thiago Melo",
-      "registro": "CRTF-3912-SP",
-      "email": "thiago.melo@gmail.com"
+      "id_paciente": "pac-1781475335766",
+      "nome_completo": "arthur",
+      "data_nascimento": "22/07/1997",
+      "endereco": "rua clodoaldo ursulano 1776.  Cascavel PR",
+      "contato": "arthur.emiliano22@gmail.com",
+      "cpf": "",
+      "num_filhos": 0,
+      "estado_civil": "Casado",
+      "profissao": "Vibe Coder",
+      "religiao": "",
+      "status_tratamento": "Ativo",
+      "id_clinica": "clin-1",
+      "id_terapeuta_responsavel": "ter-1",
+      "created_at": "2026-06-14T22:15:35.766Z",
+      "updated_at": "2026-06-14T22:29:04.564Z"
     }
   ],
-  "pacientes": [],
-  "fichas": [],
+  "fichas": [
+    {
+      "id_ficha": "fic-1781475335767",
+      "id_paciente": "pac-1781475335766",
+      "pressao_arterial": "Normal",
+      "uso_medicamentos": false,
+      "medicamentos": "",
+      "lesao_coluna": "",
+      "lesao_cranial": "",
+      "cirurgias": "",
+      "diabetes": "",
+      "queixa_principal": "insonia",
+      "created_at": "2026-06-14T22:15:35.767Z",
+      "updated_at": "2026-06-14T22:29:04.564Z"
+    }
+  ],
   "sessoes": [],
-  "auditorias": [],
+  "auditorias": [
+    {
+      "id_auditoria": "aud-1781476144564",
+      "id_paciente": "pac-1781475335766",
+      "timestamp_aceite": "2026-06-14T22:29:04.565Z",
+      "ip_origem": "187.41.57.137",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "termo_versao": "LGPD-REFLEXO-V1"
+    }
+  ],
   "historico": [],
-  "tokens": []
+  "tokens": [
+    {
+      "id_token": "tok-1781475335767",
+      "token_string": "189540",
+      "id_paciente": "pac-1781475335766",
+      "foi_usado": true,
+      "expira_em": "2026-06-15T22:15:35.767Z",
+      "criado_em": "2026-06-14T22:15:35.767Z"
+    }
+  ]
 }

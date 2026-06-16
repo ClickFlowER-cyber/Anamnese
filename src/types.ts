@@ -9,6 +9,7 @@ export interface Terapeuta {
   nome: string;
   registro: string;
   email?: string;
+  senha?: string;
 }
 
 export interface Paciente {

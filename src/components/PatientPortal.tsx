@@ -658,17 +658,18 @@ export default function PatientPortal({ tokenString, onSuccess, standalone = fal
             3. Controle Legal de Consentimento (LGPD)
           </h2>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-600 leading-relaxed max-h-56 overflow-y-auto shadow-inner space-y-3 font-sans">
-            <p className="font-bold text-slate-800">Declaro que li e concordo com o Termo de Responsabilidade abaixo:</p>
-            <p className="italic">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-sm text-slate-800 leading-relaxed max-h-72 overflow-y-auto shadow-inner space-y-4 font-sans">
+            <p className="font-bold text-slate-900 border-b border-slate-200/60 pb-2">Declaro que li e concordo com o Termo de Responsabilidade abaixo:</p>
+            <p className="text-slate-700 font-normal">
               “Responsabilizo-me pelas informações aqui transmitidas como sendo a verdade e estou ciente do tratamento a ser realizado com Reflexologia, o qual usará apenas as mãos e instrumentos não invasivos em sua terapêutica, bem como os possíveis efeitos secundários ocasionados pelo tratamento ao qual concordo expressamente neste termo.”
             </p>
-            <p className="italic">
+            <p className="text-slate-700 font-normal">
               “Também estou ciente que a Reflexoterapia não é uma especialidade Médica, Psicológica ou da área da Fisioterapia, não tendo o profissional que fará o trabalho técnico, a necessidade de uma formação em qualquer destas áreas.”
             </p>
-            <p className="font-semibold text-slate-750">
-              “Autorizo o tratamento recomendado.”
-            </p>
+            <div className="bg-teal-50/50 p-2.5 rounded-lg border border-teal-100 text-[13px] font-bold text-teal-900 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-teal-500 shrink-0"></span>
+              <span>“Autorizo o tratamento recomendado.”</span>
+            </div>
           </div>
 
           {/* Accept Switch Checkbox */}

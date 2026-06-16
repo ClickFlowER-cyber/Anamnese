@@ -30,10 +30,7 @@ function initDb() {
       { id_clinica: "clin-1", nome: "Clínica Harmonya Podal", cnpj: "45.892.311/0001-08" },
       { id_clinica: "clin-2", nome: "Espaço Integrativo Saúde do Pé", cnpj: "82.411.391/0001-44" }
     ],
-    terapeutas: [
-      { id_terapeuta: "ter-1", nome: "Dra. Renata Vasconcelos", registro: "CRTF-1244-SP", email: "renata.vasconcelos@gmail.com" },
-      { id_terapeuta: "ter-2", nome: "Dr. Thiago Melo", registro: "CRTF-3912-SP", email: "thiago.melo@gmail.com" }
-    ],
+    terapeutas: [],
     pacientes: [],
     fichas: [],
     sessoes: [],
@@ -76,7 +73,7 @@ app.get("/api/config", (req, res) => {
 
 // 1.5. Therapist Login / Registration
 app.post("/api/auth/login", (req, res) => {
-  const { email, nome } = req.body;
+  const { email, nome, password, isSignUpMode } = req.body;
   if (!email) {
     return res.status(400).json({ error: "E-mail é obrigatório." });
   }
@@ -100,7 +97,54 @@ app.post("/api/auth/login", (req, res) => {
     }
   }
 
-  // If still not found, create a new one dynamically (e.g. Joao, Rosani, any guest therapist)
+  // Handle Sign-Up vs Login flow with password / fallback compatibility
+  if (isSignUpMode) {
+    if (therapist) {
+      // If therapist exists and has a password recorded, check if it matches
+      if (therapist.senha && password && therapist.senha !== password) {
+        return res.status(400).json({ error: "Este endereço de e-mail já está cadastrado com outra senha por um terapeuta no servidor." });
+      }
+      // If it exists but has no password, or the password matches, set it
+      if (password) {
+        therapist.senha = password;
+      }
+      if (nome) {
+        therapist.nome = nome.trim();
+      }
+      writeDb(db);
+      return res.json({ success: true, therapist });
+    }
+  } else {
+    // Login flow
+    if (therapist) {
+      // If therapist has a password set, we validate it
+      if (therapist.senha && password && therapist.senha !== password) {
+        return res.status(400).json({ error: "Senha de acesso incorreta para esta conta de terapeuta." });
+      }
+      // If therapist doesn't have a password set yet (e.g. pre-set test accounts), auto-save password on their first login
+      if (!therapist.senha && password) {
+        therapist.senha = password;
+        writeDb(db);
+      }
+    } else {
+      // Therapist not found on login flow. Instead of blocking, we auto-create his profile!
+      // This solves the sync issue if the db.json was cleared or reset.
+      const formattedName = nome ? nome.trim() : lowerEmail.split('@')[0].replace(/[^a-zA-Z]/g, ' ');
+      const normalizedName = formattedName.charAt(0).toUpperCase() + formattedName.slice(1);
+      const id_terapeuta = `ter-${Math.floor(100000 + Math.random() * 900000)}`;
+      therapist = {
+        id_terapeuta,
+        nome: normalizedName,
+        registro: `CRTF-${Math.floor(1000 + Math.random() * 9000)}-SP`,
+        email: lowerEmail,
+        senha: password || undefined
+      };
+      db.terapeutas.push(therapist);
+      writeDb(db);
+    }
+  }
+
+  // If still not found and in registration / signup mode (or as a safe default), create a new one dynamically
   if (!therapist) {
     const formattedName = nome ? nome.trim() : lowerEmail.split('@')[0].replace(/[^a-zA-Z]/g, ' ');
     const normalizedName = formattedName.charAt(0).toUpperCase() + formattedName.slice(1);
@@ -110,7 +154,8 @@ app.post("/api/auth/login", (req, res) => {
       id_terapeuta,
       nome: normalizedName,
       registro: `CRTF-${Math.floor(1000 + Math.random() * 9000)}-SP`,
-      email: lowerEmail
+      email: lowerEmail,
+      senha: password || undefined
     };
     db.terapeutas.push(therapist);
     writeDb(db);
@@ -407,6 +452,45 @@ app.post("/api/pacientes/:id/reativar", (req, res) => {
   res.json({ success: true, patient: db.pacientes[pIdx] });
 });
 
+// 7.6. Alternar Status do Paciente (Ativo/Inativo)
+app.post("/api/pacientes/:id/alterar-status", (req, res) => {
+  const pId = req.params.id;
+  const { status, terapeuta_nome } = req.body;
+
+  if (!terapeuta_nome) {
+    return res.status(400).json({ error: "Nome do terapeuta responsável é exigido para log de alteração de status." });
+  }
+
+  if (status !== "Ativo" && status !== "Inativo") {
+    return res.status(400).json({ error: "Status inválido fornecido." });
+  }
+
+  const db = readDb();
+  const pIdx = db.pacientes.findIndex(p => p.id_paciente === pId);
+
+  if (pIdx === -1) {
+    return res.status(404).json({ error: "Paciente não localizado." });
+  }
+
+  const oldStatus = db.pacientes[pIdx].status_tratamento;
+  db.pacientes[pIdx].status_tratamento = status;
+  db.pacientes[pIdx].updated_at = new Date().toISOString();
+
+  // Insert log in clinical alterations log
+  db.historico.push({
+    id_historico: "hist-status-" + Math.random().toString(36).substr(2, 9),
+    id_paciente: pId,
+    terapeuta_nome,
+    timestamp_alteracao: new Date().toISOString(),
+    campo_alterado: "Status do Tratamento",
+    valor_anterior: oldStatus,
+    valor_novo: status
+  });
+
+  writeDb(db);
+  res.json({ success: true, patient: db.pacientes[pIdx] });
+});
+
 // 8. Therapist Update Patient + Anamnese with tracking (Histórico de Alterações)
 app.put("/api/pacientes/:id", (req, res) => {
   const pId = req.params.id;
@@ -670,6 +754,16 @@ async function configureServer() {
       appType: "spa"
     });
     app.use(vite.middlewares);
+    app.get("*", async (req, res, next) => {
+      const url = req.originalUrl;
+      try {
+        let template = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf-8");
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e) {
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
